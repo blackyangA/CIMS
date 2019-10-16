@@ -1,0 +1,4 @@
+id,username,password,user,birthday,sex,phone,class,course,school_name,auth,auth_id,create_date,update_date
+1,blackyang,d8d2a04cebb91c39e2d2658a51616630,李远洋,1997-01-04,M,13920005838,None,None,None,stu,None,2019-08-28 18:56:38.947676,None
+2,blackyangA,455a1b93a618053e96c029abea931e7b,李远洋,1997-01-04,m,13920008888,None,大数据,None,stu,None,2019-10-12 21:17:28.186541,None
+3,adminA,455a1b93a618053e96c029abea931e7b,管理员A,1995-05-05,m,13666668888,None,None,None,admin,None,2019-10-15 11:07:41.947823,None
