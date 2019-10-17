@@ -1,0 +1,7 @@
+
+'''
+MVC
+models 管理数据和数据打交道
+view 视图操作，让用户操作的执行操作
+controller 管理器，从models中获取数据
+'''

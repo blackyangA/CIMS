@@ -1,21 +1,17 @@
 # -*- coding: utf-8 -*-
-# @Time : 2019/8/20 10:29
+# @Time : 2019/10/17 10:05
 # @Software: PyCharm
 # @author: 洋
-# @File : views.py.py
-from models import Student, Teacher, Admin, User
-from unit import *
-from zhenzismsclient import send_dx
-
-'''
-MVC
-models 管理数据和数据打交道
-view 视图操作，让用户操作的执行操作
-controller 管理器，从models中获取数据
-'''
-
-
+# @File : auth.py
 # 注册视图函数
+from models.student import Student
+from models.teacher import Teacher
+from models.admin import Admin
+from models.user import User
+from unit import *
+from views.student_views import *
+
+
 def _register(user_type, *args, **kwargs):
     # *args **kwargs 可变长传参
     #  工厂模式
@@ -56,43 +52,6 @@ def register():
     user_info = get_user_info()
     _register(user_type, **user_info)
 
-    """"004登录注册   27:31"""
-
-
-"""
-username,
-password,
-name,
-birthday,
-sex,
-phone,
-_class=None,
-course=None,
-school_name=None,
-auth=None,
-auth_id=None,
-create_date = None
-"""
-
-
-def sms_verification():
-    # result = send_dx(phone)
-    # code = input("请输入短信验证码:").strip()
-    # if result == code:
-    #     return True
-    # else:
-    #     return False
-    while True:
-        phone = check_phone(input("请输入你的电话号码："))
-        code = verification_code(6)
-        print(f"验证码:{code}")
-        newcode = input("请输入验证码:").strip()
-        if code == newcode:
-            result = send_dx(phone)
-            sms_code = input("请输入短信验证码:").strip()
-            if result == sms_code:
-                return phone
-
 
 def get_user_info():
     while True:
@@ -124,33 +83,60 @@ def get_user_info():
             return user_info
 
 
+#  锁定账户
+def _lock_user(username, pwd, user, user_list, index):
+    #  验证用户输入密码 三次机会
+    for i in range(3):
+        #  接收用户从控制台输入的密码
+        password = check_password(input("请输入密码："))
+        #  对接收的密码进行md5加密后和数据库取得的密码进行比对
+        if md5_password(password) == pwd:
+            #  两者一致登录成功
+            print(f"欢迎{username}用户成功登录！")
+            #  返回用户数据列表user_list
+            return user_list
+        else:
+            #  否则 提示错误及剩余机会
+            print(f"密码错误，还有{3 - (i + 1)}次机会！")
+    else:
+        # 密码三次验证不成功将原数据库MD5加密后的密码加一个“！”
+        lock_password = "!" + pwd
+        #  将修改后的密码更新到数据库
+        user.updata(index, "password", lock_password)
+        #  提示用户账号被锁定
+        print("三次密码输入错误账户已被锁定！")
+
+
 #  实现登录验证
+def _to_login(username, user, user_list, index):
+    #  如果user_list不为空
+    if user_list:
+        #  从user_list中获得password数据
+        pwd = user_list[2]
+        #  如果获取的password字符中含有“！”
+        if "!" in pwd:
+            #  说明账号已被锁定
+            print(f"账号{username}已被锁定，请重置密码！")
+            #  返回假
+            return False
+        #  账号没有被锁定的话执行_lock_user方法
+        return _lock_user(username, pwd, user, user_list, index)
+    else:
+        print("用户不存在!")
+
+
 def _login():
     while True:
         try:
+            #  初始化一个user对象
             user = User()
+            #  从控制台获取用户输入的用户名并验证
             username = check_username(input("请输入用户名："))
+            #  通过find_username方法得到该用户名所在列下标及所在列数据
+            #  （find_username返回值为元组）
             index, user_list = user.find_username(username)
-            if user_list:
-                pwd = user_list[2]
-                if "!" in pwd:
-                    print(f"账号{username}已被锁定，请重置密码！")
-                    return False
-                for i in range(3):
-                    password = check_password(input("请输入密码："))
-                    if md5_password(password) == pwd:
-                        print(f"欢迎{username}用户成功登录！")
-                        return user_list
-                    # print(f"密码输入错误{i+1}次，还有{2-(i+1)}次机会！")
-                    else:
-                        print(f"密码错误，还有{3 - (i + 1)}次机会！")
-                else:
-                    # 锁定，让原密码失效
-                    lock_password = "!" + pwd
-                    user.updata(index, "password", lock_password)
-                    print("三次密码输入错误账户已被锁定！")
-            else:
-                print("用户不存在!")
+            #  成功登录_to_login返回user_list列表如果不为空 结束while循环
+            return _to_login(username, user, user_list, index)
         except Exception as e:
             print(e)
 
@@ -158,18 +144,13 @@ def _login():
 #  实现登录视图
 def login():
     user_list = _login()
-    print(user_list)
     if user_list:
-        print("aaaa")
         user_list = user_list[1:-1]
-        print(user_list)
         auth = user_list[9]
-        print(auth)
         user = None
         if auth == "stu":
             print("身份：学生")
             user = Student(*user_list)
-            student_view(user)
         elif auth == "tea":
             print("身份：老师")
             user = Teacher(*user_list)
@@ -180,6 +161,18 @@ def login():
 
 
 #  找回密码
+def _get_back_password(user_list, user, index):
+    if user_list:
+        pwd = user_list[2]
+        if "!" in pwd:
+            password = check_password(input("请输入新密码:"))
+            re_password = check_password(input("请再次输入新密码："))
+            if password == re_password:
+                user.updata(index, "password", md5_password(password))
+                print("找回密码操作成功！")
+                return True
+
+
 def retrieve_password():
     #  1.如果用户存在,重置密码
     #  2.用户不存在,则选择注册
@@ -188,15 +181,8 @@ def retrieve_password():
             user = User()
             username = check_username(input("请输入用户名："))
             index, user_list = user.find_username(username)
-            if user_list:
-                pwd = user_list[2]
-                if "!" in pwd:
-                    password = check_password(input("请输入新密码:"))
-                    re_password = check_password(input("请再次输入新密码："))
-                    if password == re_password:
-                        user.updata(index, "password", md5_password(password))
-                        print("找回密码操作成功！")
-                        return
+            if _get_back_password(user_list, user, index):
+                break
         except Exception as e:
             print(e)
 
@@ -204,32 +190,3 @@ def retrieve_password():
 #  查看个人信息
 def show_info(user):
     user.show_info()
-
-
-#  学生视图
-def student_view(user):
-    while True:
-        no = input("""
-        1.显示个人信息
-        2.选择课程
-        3.购买课程
-        4.上课
-        5.退出
-         """)
-        if no == "1":
-            user.show_info()
-        elif no == "2":
-            user.select_course()
-        elif no == "3":
-            user.pay()
-        elif no == "4":
-            pass
-        elif no == "5":
-            break
-        else:
-            print("输入错误！")
-
-#  讲师视图
-
-
-#  管理员视图

@@ -8,7 +8,7 @@ import random
 import re
 import datetime
 from setting import *
-# from zhenzismsclient import send_dx
+from zhenzismsclient import send_dx
 
 '''
 工具模块
@@ -137,21 +137,15 @@ def get_age(value):
     return age
 
 
-# #  短信验证
-# def sms_verification():
-#     # result = send_dx(phone)
-#     #     # code = input("请输入短信验证码:").strip()
-#     #     # if result == code:
-#     #     #     return True
-#     #     # else:
-#     #     #     return False
-#     while True:
-#         phone = check_phone(input("请输入你的电话号码："))
-#         code = verification_code(6)
-#         print(f"验证码:{code}")
-#         newcode = input("请输入验证码:").strip()
-#         if code == newcode:
-#             result = send_dx(phone)
-#             sms_code = input("请输入短信验证码:").strip()
-#             if result == sms_code:
-#                 return phone
+#  短信验证
+def sms_verification():
+    while True:
+        phone = check_phone(input("请输入你的电话号码："))
+        code = verification_code(6)
+        print(f"验证码:{code}")
+        newcode = input("请输入验证码:").strip()
+        if code == newcode:
+            result = send_dx(phone)
+            sms_code = input("请输入短信验证码:").strip()
+            if result == sms_code:
+                return phone
